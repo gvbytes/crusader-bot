@@ -32,3 +32,9 @@ python bot.py
 ## health check
 
 runs a lightweight http server on $PORT for uptime checks.
+
+## permissions and discord setup
+
+- enable Server Members and Message Content intents in discord developer portal
+- bot role needs: Manage Messages, Manage Roles, Timeout Members, Manage Channels
+- bot role must sit above regular member roles in server settings to time people out
