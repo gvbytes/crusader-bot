@@ -24,9 +24,8 @@ from discord.ext import commands
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
+# Read the token only from the environment, never from the command line
 TOKEN = os.environ.get("DISCORD_BOT_TOKEN", "").strip()
-if not TOKEN and len(sys.argv) > 1:
-    TOKEN = sys.argv[1].strip()
 
 ROLE_MAP = {
     "🚀": "🚀 Builder",

@@ -5,11 +5,12 @@ Made using Antigravity.
 
 ## Features
 
-- **🛡️ Active Security Guardrails**:
-  - Anti-Toxicity & Harassment Filter
-  - Anti-Malware / Phishing / IP Logger / Executable Upload Block
-  - Anti-Flood Rate Limiter & Mass-Mention Shield
-  - Discord Invite Link Shield (Restricted to `#showcase`)
+- **🛡️ Basic Moderation Filters** (simple rules, not full malware or phishing detection):
+  - Link blocklist: deletes messages containing a short list of known IP-logger and fake-Nitro domains
+  - File-type block: deletes uploads ending in `.exe`, `.bat`, `.vbs`, `.scr`, `.cmd` or `.pif`
+  - Rate limit: deletes messages from anyone sending 5 or more within 3 seconds
+  - Mass-mention limit: deletes messages that mention more than 4 people
+  - Invite links: Discord invites are only allowed in `#showcase`
 - **🎭 Automated Reaction Roles**: Real-time role assignment on reaction clicks in `#roles`.
 - **👋 Member Welcome System**: Custom embed welcome cards for new joiners in `#welcome-lounge`.
 - **💬 Interactive Mentions & Commands**:
