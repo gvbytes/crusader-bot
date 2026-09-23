@@ -6,7 +6,7 @@ from datetime import timedelta
 import discord
 from discord.ext import commands
 import config
-from utils import channel_link, is_staff, mod_log
+from utils import channel_link, channel_slug, is_staff, mod_log
 LEET_MAP = str.maketrans({'0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '@': 'a', '$': 's', '!': 'i'})
 
 def normalize_text(text: str) -> str:
@@ -59,7 +59,7 @@ class Guardrails(commands.Cog):
                 return await self.remove(message, f"⚠️ {member.mention} please don't mention that many people at once.", '📣 Mass mention removed')
             if 'discord.gg/' in content or 'discord.com/invite/' in content:
                 showcase = channel_link(message.guild, 'showcase')
-                if not message.channel.name.endswith(config.CHANNELS['showcase']):
+                if channel_slug(message.channel.name) != config.CHANNELS['showcase']:
                     return await self.remove(message, f'📌 {member.mention} Discord invites are only allowed in {showcase}.', '✉️ Invite link removed')
             if is_toxic(message.content):
                 return await self.handle_toxic(message)

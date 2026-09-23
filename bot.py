@@ -75,7 +75,7 @@ async def on_command_error(ctx: commands.Context, error: commands.CommandError):
 
 async def handle_health_check(request):
     ready = bot.is_ready()
-    return web.json_response({'status': 'online', 'service': 'CrusaderBot', 'bot_user': str(bot.user) if bot.user else None, 'bot_status': 'ready' if ready else 'connecting', 'latency_ms': round(bot.latency * 1000) if ready else 0})
+    return web.json_response({'status': 'online', 'service': 'CrusaderBot', 'version': os.environ.get('RENDER_GIT_COMMIT', 'local')[:7], 'bot_user': str(bot.user) if bot.user else None, 'bot_status': 'ready' if ready else 'connecting', 'latency_ms': round(bot.latency * 1000) if ready else 0})
 
 async def start_health_server():
     app = web.Application()

@@ -4,11 +4,16 @@ import re
 from datetime import datetime, timezone
 import discord
 import config
+CHANNEL_SLUG_RE = re.compile('[a-z0-9-]+$')
+
+def channel_slug(name: str) -> str:
+    match = CHANNEL_SLUG_RE.search(name.lower())
+    return match.group(0).strip('-') if match else ''
 
 def find_channel(guild: discord.Guild, key: str):
     wanted = config.CHANNELS.get(key, key)
     for ch in guild.text_channels:
-        if ch.name == wanted or ch.name.endswith('・' + wanted):
+        if channel_slug(ch.name) == wanted:
             return ch
     return None
 
@@ -22,15 +27,23 @@ def is_staff(member) -> bool:
     perms = member.guild_permissions
     return perms.administrator or perms.manage_messages or any((r.name == config.STAFF_ROLE for r in member.roles))
 
-async def mod_log(guild: discord.Guild, title: str, description: str, color=config.COLOR_WARN):
-    ch = find_channel(guild, 'mod_log')
-    if not ch:
-        return
+async def mod_log(guild: discord.Guild, title: str, description: str, color=config.COLOR_WARN, important: bool=False) -> bool:
     embed = discord.Embed(title=title, description=description, color=color, timestamp=datetime.now(timezone.utc))
-    try:
-        await ch.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
-    except discord.HTTPException:
-        pass
+    ch = find_channel(guild, 'mod_log')
+    if ch:
+        try:
+            await ch.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
+            return True
+        except discord.HTTPException:
+            pass
+    if important and guild.owner:
+        embed.set_footer(text=f'{guild.name} has no #mod-log channel, so this was sent to you. Create a staff-only #mod-log to receive these there.')
+        try:
+            await guild.owner.send(embed=embed)
+            return True
+        except discord.HTTPException:
+            pass
+    return False
 
 def can_moderate(actor: discord.Member, target: discord.Member) -> str | None:
     if target == actor:

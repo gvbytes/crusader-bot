@@ -2,7 +2,7 @@ import os
 TOKEN = os.environ.get('DISCORD_BOT_TOKEN', '').strip()
 PORT = int(os.environ.get('PORT', 8080))
 PREFIX = '!'
-CHANNELS = {'roles': 'roles', 'rules': 'rules-and-info', 'showcase': 'showcase', 'welcome': 'welcome-lounge', 'intro': 'introductions', 'suggestions': 'suggestions', 'mod_log': 'mod-log', 'ctf': 'ctf-news'}
+CHANNELS = {'roles': 'roles', 'rules': 'rules-and-info', 'showcase': 'showcase', 'welcome': 'welcome-lounge', 'intro': 'introductions', 'suggestions': 'suggestions', 'mod_log': 'mod-log', 'ctf': 'cyber-and-ctf'}
 STAFF_ROLE = '👑 Leader'
 MEMBER_ROLE = '⚔️ Crusader'
 ROLE_MAP = {'🚀': '🚀 Builder', '🚩': '🚩 CTF / Cyber', '🎮': '🎮 Gamer', '✅': '⚔️ Crusader'}
