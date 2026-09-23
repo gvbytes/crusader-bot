@@ -8,6 +8,7 @@ from collections import defaultdict
 os.environ['SSL_CERT_FILE'] = certifi.where()
 ssl._create_default_https_context = lambda: ssl.create_default_context(cafile=certifi.where())
 import asyncio
+from aiohttp import web
 import discord
 from discord.ext import commands
 intents = discord.Intents.all()
@@ -19,6 +20,25 @@ ROLE_MAP = {'🚀': '🚀 Builder', '🚩': '🚩 CTF / Cyber', '🎮': '🎮 Ga
 MALICIOUS_DOMAINS = ['grabify.link', 'iplogger.org', '2no.co', 'yip.su', 'iplis.ru', 'discord-nitro', 'free-nitro', 'dlscord', 'discorcl', 'steamcommunitu', 'steamcomminuty', 'gift-discord']
 DANGEROUS_EXTENSIONS = ['.exe', '.bat', '.vbs', '.scr', '.cmd', '.pif']
 USER_MESSAGE_LOG = defaultdict(list)
+
+async def handle_health_check(request):
+    bot_status = 'connecting'
+    latency = 0
+    if bot.is_ready():
+        bot_status = 'ready'
+        latency = round(bot.latency * 1000)
+    return web.json_response({'status': 'online', 'service': 'Crusaders Discord Bot', 'bot_user': str(bot.user) if bot.user else None, 'bot_status': bot_status, 'latency_ms': latency, 'guardrails': 'active'})
+
+async def start_health_server():
+    port = int(os.environ.get('PORT', 8080))
+    app = web.Application()
+    app.router.add_get('/', handle_health_check)
+    app.router.add_get('/health', handle_health_check)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
+    print(f'🌐 Health check HTTP server listening on 0.0.0.0:{port}', flush=True)
 
 @bot.event
 async def on_ready():
@@ -210,5 +230,21 @@ async def on_member_join(member):
             await welcome_ch.send(embed=embed)
         except Exception:
             pass
+
+async def main():
+    if not TOKEN:
+        print('\n' + '=' * 60, flush=True)
+        print('❌ CRITICAL ERROR: DISCORD_BOT_TOKEN IS NOT SET!', flush=True)
+        print('👉 In Render Dashboard -> Environment -> Add Environment Variable:', flush=True)
+        print('   Key: DISCORD_BOT_TOKEN', flush=True)
+        print('   Value: <Your Bot Token>', flush=True)
+        print('=' * 60 + '\n', flush=True)
+        sys.exit(1)
+    await start_health_server()
+    async with bot:
+        await bot.start(TOKEN)
 if __name__ == '__main__':
-    bot.run(TOKEN)
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print('Bot shutdown gracefully.', flush=True)

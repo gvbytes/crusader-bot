@@ -33,3 +33,7 @@ python bot.py
 deploy as background worker or cloud container:
 - set DISCORD_BOT_TOKEN in environment
 - runs 24/7 on render, railway or fly.io
+
+## health check
+
+runs a lightweight http server on $PORT for uptime checks.
