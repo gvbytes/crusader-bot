@@ -1,0 +1,24 @@
+import os
+TOKEN = os.environ.get('DISCORD_BOT_TOKEN', '').strip()
+PORT = int(os.environ.get('PORT', 8080))
+PREFIX = '!'
+CHANNELS = {'roles': 'roles', 'rules': 'rules-and-info', 'showcase': 'showcase', 'welcome': 'welcome-lounge', 'intro': 'introductions', 'suggestions': 'suggestions', 'mod_log': 'mod-log', 'ctf': 'ctf-news'}
+STAFF_ROLE = '👑 Leader'
+MEMBER_ROLE = '⚔️ Crusader'
+ROLE_MAP = {'🚀': '🚀 Builder', '🚩': '🚩 CTF / Cyber', '🎮': '🎮 Gamer', '✅': '⚔️ Crusader'}
+MALICIOUS_DOMAINS = ['grabify.link', 'iplogger.org', '2no.co', 'yip.su', 'iplis.ru', 'discord-nitro', 'free-nitro', 'dlscord', 'discorcl', 'steamcommunitu', 'steamcomminuty', 'gift-discord']
+DANGEROUS_EXTENSIONS = ['.exe', '.bat', '.vbs', '.scr', '.cmd', '.pif']
+SPAM_MESSAGES = 5
+SPAM_SECONDS = 3.0
+MAX_MENTIONS = 4
+TOXIC_PHRASES = ['kill yourself', 'kys', 'go die', 'hope you die', 'you should die', 'neck yourself', 'end yourself', 'unalive yourself', 'drink bleach', 'nobody likes you', 'everyone hates you', 'no one would miss you', 'fuck you', 'fuck off', 'stfu']
+TOXIC_PHRASES += [p.strip() for p in os.environ.get('EXTRA_BLOCKED_PHRASES', '').split(',') if p.strip()]
+TOXIC_STRIKE_WINDOW = 600
+TOXIC_STRIKES_FOR_TIMEOUT = 3
+TOXIC_TIMEOUT_MINUTES = 10
+CTF_WEEKLY_POST = True
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+COLOR_MAIN = 54527
+COLOR_WARN = 16096779
+COLOR_OK = 1096065
+COLOR_BAD = 15680580
