@@ -12,6 +12,7 @@ import certifi
 import re
 import time
 from collections import defaultdict
+from datetime import timedelta
 
 os.environ["SSL_CERT_FILE"] = certifi.where()
 ssl._create_default_https_context = lambda: ssl.create_default_context(cafile=certifi.where())
@@ -42,6 +43,43 @@ MALICIOUS_DOMAINS = [
 
 DANGEROUS_EXTENSIONS = [".exe", ".bat", ".vbs", ".scr", ".cmd", ".pif"]
 USER_MESSAGE_LOG = defaultdict(list)
+
+# --- Anti-toxicity & harassment filter ---
+# Phrases aimed at hurting another member. Server owners can add their own
+# with the EXTRA_BLOCKED_PHRASES environment variable (comma-separated).
+TOXIC_PHRASES = [
+    "kill yourself", "kys", "go die", "hope you die", "you should die",
+    "neck yourself", "end yourself", "unalive yourself", "drink bleach",
+    "nobody likes you", "everyone hates you", "no one would miss you",
+    "fuck you", "fuck off", "stfu",
+]
+TOXIC_PHRASES += [p.strip() for p in os.environ.get("EXTRA_BLOCKED_PHRASES", "").split(",") if p.strip()]
+
+TOXIC_STRIKE_WINDOW = 600      # strikes older than 10 minutes are forgotten
+TOXIC_STRIKES_FOR_TIMEOUT = 3  # 3 strikes inside the window -> timeout
+TOXIC_TIMEOUT_MINUTES = 10
+TOXIC_STRIKES = defaultdict(list)
+
+LEET_MAP = str.maketrans({"0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "@": "a", "$": "s", "!": "i"})
+
+def normalize_text(text):
+    """Lowercase, undo simple leetspeak, drop symbols and squash repeated letters
+    so that 'K.Y.S', 'kyyys' and 'k1ll y0urself' are all caught."""
+    text = text.lower().translate(LEET_MAP)
+    text = re.sub(r"[^a-z\s]", "", text)       # 'k.y.s' -> 'kys'
+    text = re.sub(r"(.)\1+", r"\1", text)     # 'kyyys' -> 'kys', 'kill' -> 'kil'
+    return " ".join(text.split())
+
+# Patterns are normalized the same way, then matched as whole words only,
+# so 'skills' or 'stfuzzy' never trigger a false alarm.
+TOXIC_REGEXES = [
+    re.compile(r"\b" + r"\s*".join(re.escape(w) for w in normalize_text(p).split()) + r"\b")
+    for p in TOXIC_PHRASES if normalize_text(p)
+]
+
+def is_toxic(text):
+    cleaned = normalize_text(text)
+    return any(rx.search(cleaned) for rx in TOXIC_REGEXES)
 
 # =============================================================================
 # LIGHTWEIGHT HTTP HEALTH CHECK SERVER (Required for Render Free Web Service)
@@ -209,6 +247,37 @@ async def on_message(message):
                     return
                 except Exception:
                     pass
+
+        # Guardrail 6: Anti-toxicity & harassment
+        if is_toxic(message.content):
+            now = time.time()
+            strikes = [t for t in TOXIC_STRIKES[member.id] if now - t < TOXIC_STRIKE_WINDOW]
+            strikes.append(now)
+            TOXIC_STRIKES[member.id] = strikes
+            try:
+                await message.delete()
+            except Exception:
+                pass
+
+            if len(strikes) >= TOXIC_STRIKES_FOR_TIMEOUT:
+                TOXIC_STRIKES[member.id] = []
+                try:
+                    await member.timeout(timedelta(minutes=TOXIC_TIMEOUT_MINUTES), reason="Repeated harassment (CrusaderBot)")
+                    notice = f"🔇 {member.mention} has been timed out for {TOXIC_TIMEOUT_MINUTES} minutes for repeated harassment."
+                except Exception:
+                    notice = f"⛔ {member.mention} keeps posting harassment. Staff, please review."
+                print(f"  [!] Toxicity timeout for {member} ({member.id})", flush=True)
+            else:
+                left = TOXIC_STRIKES_FOR_TIMEOUT - len(strikes)
+                notice = f"⚠️ {member.mention} Harassment isn't allowed here. Message removed. ({left} more and you'll be timed out.)"
+
+            try:
+                warn = await message.channel.send(notice)
+                await asyncio.sleep(8)
+                await warn.delete()
+            except Exception:
+                pass
+            return
 
     # Bot mention response
     if bot.user in message.mentions:
