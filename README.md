@@ -21,6 +21,13 @@ start the bot:
 python bot.py
 ```
 
+## features
+
+- link blocklist: removes known ip-logger and fake-nitro links
+- file-type block: blocks dangerous executable uploads
+- rate limit: basic spam protection
+- mass-mention limit: blocks messages mentioning too many members
+
 ## deployment
 
 deploy as background worker or cloud container:
