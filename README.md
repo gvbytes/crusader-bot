@@ -29,12 +29,6 @@ python bot.py
 - mass-mention limit: blocks messages mentioning too many members
 - harassment filter: keyword matching on abusive phrases with strike-based timeouts
 
-## deployment
-
-deploy as background worker or cloud container:
-- set DISCORD_BOT_TOKEN in environment
-- runs 24/7 on render, railway or fly.io
-
 ## health check
 
 runs a lightweight http server on $PORT for uptime checks.
