@@ -1,6 +1,7 @@
 # Crusaders Discord Bot ⚔️
 
 24/7 Discord Community Bot & Automated Security Guardrails for **Crusaders** ([gvbytes.com](https://gvbytes.com)).
+Made using Antigravity.
 
 ## Features
 
