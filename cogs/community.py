@@ -7,6 +7,10 @@ from discord.ext import commands
 import config
 from utils import channel_link, find_channel, mod_log
 
+REPORT_SENT = "✅ Thanks. Staff have been notified privately."
+REPORT_FAILED = ("⚠️ I could not deliver your report because this server has no #mod-log channel. "
+                 "Please message a staff member directly.")
+
 NUMBER_EMOJIS = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
 
 
@@ -20,15 +24,15 @@ class ReportModal(discord.ui.Modal, title="Report this message to staff"):
 
     async def on_submit(self, interaction: discord.Interaction):
         m = self.message
-        await mod_log(interaction.guild, "🚩 Message reported",
+        delivered = await mod_log(interaction.guild, "🚩 Message reported",
                       f"**Reported by:** {interaction.user.mention}\n"
                       f"**Author:** {m.author.mention} (`{m.author.id}`)\n"
                       f"**Message:** [jump to message]({m.jump_url})\n"
                       f"> {m.content[:700] or '*(attachment only)*'}\n"
                       f"**Reason:** {self.reason.value}",
-                      color=config.COLOR_BAD)
+                      color=config.COLOR_BAD, important=True)
         await interaction.response.send_message(
-            "✅ Thanks. Staff have been notified privately.", ephemeral=True)
+            REPORT_SENT if delivered else REPORT_FAILED, ephemeral=True)
 
 
 class Community(commands.Cog):
@@ -179,11 +183,11 @@ class Community(commands.Cog):
                 await ctx.message.delete()
             except discord.HTTPException:
                 pass
-        await mod_log(ctx.guild, "🚩 Member reported",
+        delivered = await mod_log(ctx.guild, "🚩 Member reported",
                       f"**Reported by:** {ctx.author.mention}\n**Member:** {member.mention} (`{member.id}`)\n"
                       f"**Channel:** {ctx.channel.mention}\n**Reason:** {reason}",
-                      color=config.COLOR_BAD)
-        text = "✅ Thanks. Staff have been notified privately."
+                      color=config.COLOR_BAD, important=True)
+        text = REPORT_SENT if delivered else REPORT_FAILED
         if ctx.interaction:
             await ctx.send(text, ephemeral=True)
         else:

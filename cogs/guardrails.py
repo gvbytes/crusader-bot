@@ -10,7 +10,7 @@ import discord
 from discord.ext import commands
 
 import config
-from utils import channel_link, is_staff, mod_log
+from utils import channel_link, channel_slug, is_staff, mod_log
 
 # --- Harassment detection ------------------------------------------------------
 LEET_MAP = str.maketrans({"0": "o", "1": "i", "3": "e", "4": "a", "5": "s",
@@ -101,7 +101,7 @@ class Guardrails(commands.Cog):
             # 5. Invite links outside #showcase
             if "discord.gg/" in content or "discord.com/invite/" in content:
                 showcase = channel_link(message.guild, "showcase")
-                if not message.channel.name.endswith(config.CHANNELS["showcase"]):
+                if channel_slug(message.channel.name) != config.CHANNELS["showcase"]:
                     return await self.remove(message,
                         f"📌 {member.mention} Discord invites are only allowed in {showcase}.",
                         "✉️ Invite link removed")

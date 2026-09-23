@@ -11,8 +11,8 @@ PORT = int(os.environ.get("PORT", 8080))
 PREFIX = "!"
 
 # --- Channels ---
-# The bot finds channels by the part of the name after the "・", so
-# "🎭・roles" and a plain "roles" channel both match "roles".
+# The bot finds channels by the plain words at the end of the name, so
+# "🎭・roles", "🎭•roles" and a plain "roles" channel all match "roles".
 CHANNELS = {
     "roles": "roles",
     "rules": "rules-and-info",
@@ -21,7 +21,7 @@ CHANNELS = {
     "intro": "introductions",
     "suggestions": "suggestions",
     "mod_log": "mod-log",
-    "ctf": "ctf-news",
+    "ctf": "cyber-and-ctf",
 }
 
 # --- Roles ---
@@ -62,7 +62,7 @@ TOXIC_STRIKES_FOR_TIMEOUT = 3
 TOXIC_TIMEOUT_MINUTES = 10
 
 # --- CTF feed ---
-CTF_WEEKLY_POST = True   # post upcoming CTFs to #ctf-news every Monday, 9:00 IST
+CTF_WEEKLY_POST = True   # post upcoming CTFs to #cyber-and-ctf every Monday, 9:00 IST
 
 # --- Saved data (warnings, reminders) ---
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")

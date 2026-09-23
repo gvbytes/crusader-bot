@@ -44,7 +44,7 @@ Only visible to members with the matching Discord permission.
 
 ### 🚩 CTF
 - **`/ctf [count] [online_only]`**: upcoming CTF competitions from [CTFtime](https://ctftime.org), with times shown in each viewer's own timezone
-- **Weekly post:** every Monday at 9:00 IST, the CTFs of the week are posted in `#ctf-news`
+- **Weekly post:** every Monday at 9:00 IST, the CTFs of the week are posted in `#cyber-and-ctf`
 
 ---
 
@@ -69,14 +69,14 @@ Everything else (channel names, roles, filter limits) is in [`config.py`](config
 - Invite the bot with the `bot` and `applications.commands` scopes so slash commands appear.
 
 ### Channels
-The bot finds channels by the part of the name after `・`, so `🎭・roles` and `roles` both work.
+The bot finds channels by the plain words at the end of the name, so `🎭・roles`, `🎭•roles` and `roles` all work.
 Optional channels are simply skipped if they don't exist:
 
 | Channel | Used for |
 |---|---|
-| `#mod-log` | Record of auto-deletions, reports and staff actions. **Make it staff-only.** |
+| `#mod-log` | Record of auto-deletions, reports and staff actions. **Make it staff-only.** Until it exists, reports are sent to the server owner by DM. |
 | `#suggestions` | `/suggest` posts (otherwise posted in the current channel) |
-| `#ctf-news` | Weekly CTF post |
+| `#cyber-and-ctf` | Weekly CTF post |
 | `#roles`, `#rules-and-info`, `#welcome-lounge`, `#introductions`, `#showcase` | Existing channels, linked from messages |
 
 ### Saved data

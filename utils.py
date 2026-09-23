@@ -10,18 +10,28 @@ import discord
 import config
 
 
+CHANNEL_SLUG_RE = re.compile(r"[a-z0-9-]+$")
+
+
+def channel_slug(name: str) -> str:
+    """The plain part at the end of a channel name: '🎭・roles', '🎭•roles'
+    and 'roles' all give 'roles', whatever decoration comes first."""
+    match = CHANNEL_SLUG_RE.search(name.lower())
+    return match.group(0).strip("-") if match else ""
+
+
 def find_channel(guild: discord.Guild, key: str):
     """Find a text channel by its config key, e.g. find_channel(guild, "roles")."""
     wanted = config.CHANNELS.get(key, key)
     for ch in guild.text_channels:
-        if ch.name == wanted or ch.name.endswith("・" + wanted):
+        if channel_slug(ch.name) == wanted:
             return ch
     return None
 
 
 def channel_link(guild: discord.Guild, key: str) -> str:
     """A clickable #channel link. Discord needs the channel ID for this,
-    which is why writing <#🎭・roles> by name showed up as plain text."""
+    which is why writing a channel's name inside <#...> showed up as plain text."""
     ch = find_channel(guild, key)
     return ch.mention if ch else f"#{config.CHANNELS.get(key, key)}"
 
@@ -37,17 +47,30 @@ def is_staff(member) -> bool:
     )
 
 
-async def mod_log(guild: discord.Guild, title: str, description: str, color=config.COLOR_WARN):
-    """Post an entry in #mod-log (silently skipped if the channel doesn't exist)."""
-    ch = find_channel(guild, "mod_log")
-    if not ch:
-        return
+async def mod_log(guild: discord.Guild, title: str, description: str,
+                  color=config.COLOR_WARN, important: bool = False) -> bool:
+    """Post an entry in #mod-log. Returns True if staff received it.
+
+    If #mod-log doesn't exist, routine entries are skipped, but important ones
+    (like member reports) are sent to the server owner by DM instead."""
     embed = discord.Embed(title=title, description=description, color=color,
                           timestamp=datetime.now(timezone.utc))
-    try:
-        await ch.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
-    except discord.HTTPException:
-        pass
+    ch = find_channel(guild, "mod_log")
+    if ch:
+        try:
+            await ch.send(embed=embed, allowed_mentions=discord.AllowedMentions.none())
+            return True
+        except discord.HTTPException:
+            pass
+    if important and guild.owner:
+        embed.set_footer(text=f"{guild.name} has no #mod-log channel, so this was sent to you. "
+                              "Create a staff-only #mod-log to receive these there.")
+        try:
+            await guild.owner.send(embed=embed)
+            return True
+        except discord.HTTPException:
+            pass
+    return False
 
 
 def can_moderate(actor: discord.Member, target: discord.Member) -> str | None:
