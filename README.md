@@ -23,4 +23,21 @@ Made using Antigravity.
 - **🌐 HTTP Health Check**:
   - Built-in `/health` endpoint for Render, Railway, and uptime pingers.
 
+---
 
+## Setup
+
+```bash
+pip install -r requirements.txt
+export DISCORD_BOT_TOKEN="your_bot_token_here"
+python bot.py
+```
+
+Environment variables:
+- `DISCORD_BOT_TOKEN` (required): your bot token from the Discord Developer Portal
+- `EXTRA_BLOCKED_PHRASES` (optional): extra phrases for the harassment filter, comma-separated
+- `PORT` (optional, default `8080`): port for the `/health` endpoint
+
+Discord permissions:
+- The bot's role needs **Manage Messages** to delete messages and **Manage Roles** for reaction roles.
+- For harassment timeouts, it also needs **Moderate Members**, and its role must sit **above** the members it moderates. Without this, the bot still deletes and warns but can't time anyone out.
