@@ -5,6 +5,7 @@ import certifi
 import re
 import time
 from collections import defaultdict
+from datetime import timedelta
 os.environ['SSL_CERT_FILE'] = certifi.where()
 ssl._create_default_https_context = lambda: ssl.create_default_context(cafile=certifi.where())
 import asyncio
@@ -18,6 +19,24 @@ ROLE_MAP = {'🚀': '🚀 Builder', '🚩': '🚩 CTF / Cyber', '🎮': '🎮 Ga
 MALICIOUS_DOMAINS = ['grabify.link', 'iplogger.org', '2no.co', 'yip.su', 'iplis.ru', 'discord-nitro', 'free-nitro', 'dlscord', 'discorcl', 'steamcommunitu', 'steamcomminuty', 'gift-discord']
 DANGEROUS_EXTENSIONS = ['.exe', '.bat', '.vbs', '.scr', '.cmd', '.pif']
 USER_MESSAGE_LOG = defaultdict(list)
+TOXIC_PHRASES = ['kill yourself', 'kys', 'go die', 'hope you die', 'you should die', 'neck yourself', 'end yourself', 'unalive yourself', 'drink bleach', 'nobody likes you', 'everyone hates you', 'no one would miss you', 'fuck you', 'fuck off', 'stfu']
+TOXIC_PHRASES += [p.strip() for p in os.environ.get('EXTRA_BLOCKED_PHRASES', '').split(',') if p.strip()]
+TOXIC_STRIKE_WINDOW = 600
+TOXIC_STRIKES_FOR_TIMEOUT = 3
+TOXIC_TIMEOUT_MINUTES = 10
+TOXIC_STRIKES = defaultdict(list)
+LEET_MAP = str.maketrans({'0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '@': 'a', '$': 's', '!': 'i'})
+
+def normalize_text(text):
+    text = text.lower().translate(LEET_MAP)
+    text = re.sub('[^a-z\\s]', '', text)
+    text = re.sub('(.)\\1+', '\\1', text)
+    return ' '.join(text.split())
+TOXIC_REGEXES = [re.compile('\\b' + '\\s*'.join((re.escape(w) for w in normalize_text(p).split())) + '\\b') for p in TOXIC_PHRASES if normalize_text(p)]
+
+def is_toxic(text):
+    cleaned = normalize_text(text)
+    return any((rx.search(cleaned) for rx in TOXIC_REGEXES))
 
 async def handle_health_check(request):
     bot_status = 'connecting'
@@ -140,6 +159,33 @@ async def on_message(message):
                     return
                 except Exception:
                     pass
+        if is_toxic(message.content):
+            now = time.time()
+            strikes = [t for t in TOXIC_STRIKES[member.id] if now - t < TOXIC_STRIKE_WINDOW]
+            strikes.append(now)
+            TOXIC_STRIKES[member.id] = strikes
+            try:
+                await message.delete()
+            except Exception:
+                pass
+            if len(strikes) >= TOXIC_STRIKES_FOR_TIMEOUT:
+                TOXIC_STRIKES[member.id] = []
+                try:
+                    await member.timeout(timedelta(minutes=TOXIC_TIMEOUT_MINUTES), reason='Repeated harassment (CrusaderBot)')
+                    notice = f'🔇 {member.mention} has been timed out for {TOXIC_TIMEOUT_MINUTES} minutes for repeated harassment.'
+                except Exception:
+                    notice = f'⛔ {member.mention} keeps posting harassment. Staff, please review.'
+                print(f'  [!] Toxicity timeout for {member} ({member.id})', flush=True)
+            else:
+                left = TOXIC_STRIKES_FOR_TIMEOUT - len(strikes)
+                notice = f"⚠️ {member.mention} Harassment isn't allowed here. Message removed. ({left} more and you'll be timed out.)"
+            try:
+                warn = await message.channel.send(notice)
+                await asyncio.sleep(8)
+                await warn.delete()
+            except Exception:
+                pass
+            return
     if bot.user in message.mentions:
         embed = discord.Embed(title='⚔️ CrusaderBot Online & Guardrails Active', description=f'Hey {message.author.mention}! Server security & guardrails are **100% Operational**.\n\n• **Role Picker**: <#🎭・roles>\n• **Server Protocols**: <#📜・rules-and-info>\n• **Showcase**: <#🚀・showcase>\n• **Founder Portfolio**: [gvbytes.com](https://gvbytes.com)\n\nType `!help` or `!ping` for utilities!', color=discord.Color.from_rgb(245, 158, 11))
         embed.set_footer(text=f'Latency: {round(bot.latency * 1000)}ms • CrusaderBot')

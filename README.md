@@ -27,6 +27,7 @@ python bot.py
 - file-type block: blocks dangerous executable uploads
 - rate limit: basic spam protection
 - mass-mention limit: blocks messages mentioning too many members
+- harassment filter: keyword matching on abusive phrases with strike-based timeouts
 
 ## deployment
 
