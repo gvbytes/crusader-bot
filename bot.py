@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Crusaders 24/7 Discord Community Bot Service & Active Guardrails
-Configured for Cloud Deployment (Render, Railway, Fly.io, VPS)
+Optimized for 24/7 Cloud Deployment on Render (Free Web Service), Railway, Fly.io, or VPS.
+Includes an internal HTTP health check server so Render detects it as a healthy Web Service.
 """
 
 import sys
@@ -16,6 +17,7 @@ os.environ["SSL_CERT_FILE"] = certifi.where()
 ssl._create_default_https_context = lambda: ssl.create_default_context(cafile=certifi.where())
 
 import asyncio
+from aiohttp import web
 import discord
 from discord.ext import commands
 
@@ -42,6 +44,40 @@ MALICIOUS_DOMAINS = [
 DANGEROUS_EXTENSIONS = [".exe", ".bat", ".vbs", ".scr", ".cmd", ".pif"]
 USER_MESSAGE_LOG = defaultdict(list)
 
+# =============================================================================
+# LIGHTWEIGHT HTTP HEALTH CHECK SERVER (Required for Render Free Web Service)
+# =============================================================================
+async def handle_health_check(request):
+    bot_status = "connecting"
+    latency = 0
+    if bot.is_ready():
+        bot_status = "ready"
+        latency = round(bot.latency * 1000)
+
+    return web.json_response({
+        "status": "online",
+        "service": "Crusaders Discord Bot",
+        "bot_user": str(bot.user) if bot.user else None,
+        "bot_status": bot_status,
+        "latency_ms": latency,
+        "guardrails": "active"
+    })
+
+async def start_health_server():
+    port = int(os.environ.get("PORT", 8080))
+    app = web.Application()
+    app.router.add_get("/", handle_health_check)
+    app.router.add_get("/health", handle_health_check)
+    
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    print(f"🌐 Health check HTTP server listening on 0.0.0.0:{port}", flush=True)
+
+# =============================================================================
+# DISCORD BOT EVENTS
+# =============================================================================
 @bot.event
 async def on_ready():
     print("=" * 60, flush=True)
@@ -101,6 +137,7 @@ async def on_message(message):
                 break
 
     if not is_leader:
+        # Guardrail 1: Malicious links
         for domain in MALICIOUS_DOMAINS:
             if domain in content_lower:
                 try:
@@ -114,6 +151,7 @@ async def on_message(message):
                 except Exception:
                     pass
 
+        # Guardrail 2: Executable files
         for attachment in message.attachments:
             if any(attachment.filename.lower().endswith(ext) for ext in DANGEROUS_EXTENSIONS):
                 try:
@@ -127,6 +165,7 @@ async def on_message(message):
                 except Exception:
                     pass
 
+        # Guardrail 3: Anti-spam
         now = time.time()
         timestamps = USER_MESSAGE_LOG[member.id]
         timestamps = [t for t in timestamps if now - t < 3.0]
@@ -145,6 +184,7 @@ async def on_message(message):
             except Exception:
                 pass
 
+        # Guardrail 4: Mass mentions
         if len(message.mentions) > 4:
             try:
                 await message.delete()
@@ -157,6 +197,7 @@ async def on_message(message):
             except Exception:
                 pass
 
+        # Guardrail 5: Discord invite links
         if ("discord.gg/" in content_lower or "discord.com/invite/" in content_lower):
             if message.channel.name != "🚀・showcase":
                 try:
@@ -170,6 +211,7 @@ async def on_message(message):
                 except Exception:
                     pass
 
+    # Bot mention response
     if bot.user in message.mentions:
         embed = discord.Embed(
             title="⚔️ CrusaderBot Online & Guardrails Active",
@@ -189,6 +231,9 @@ async def on_message(message):
 
     await bot.process_commands(message)
 
+# =============================================================================
+# BOT COMMANDS
+# =============================================================================
 @bot.command()
 async def ping(ctx):
     latency = round(bot.latency * 1000)
@@ -226,6 +271,9 @@ async def links(ctx):
     )
     await ctx.send(embed=embed)
 
+# =============================================================================
+# REACTION ROLE HANDLERS
+# =============================================================================
 @bot.event
 async def on_raw_reaction_add(payload):
     if payload.user_id == bot.user.id:
@@ -295,5 +343,28 @@ async def on_member_join(member):
         except Exception:
             pass
 
+# =============================================================================
+# ENTRYPOINT WITH VALIDATION & HEALTH SERVER
+# =============================================================================
+async def main():
+    if not TOKEN:
+        print("\n" + "=" * 60, flush=True)
+        print("❌ CRITICAL ERROR: DISCORD_BOT_TOKEN IS NOT SET!", flush=True)
+        print("👉 In Render Dashboard -> Environment -> Add Environment Variable:", flush=True)
+        print("   Key: DISCORD_BOT_TOKEN", flush=True)
+        print("   Value: <Your Bot Token>", flush=True)
+        print("=" * 60 + "\n", flush=True)
+        sys.exit(1)
+
+    # Launch HTTP Health Check server on Render's $PORT
+    await start_health_server()
+
+    # Launch Discord Gateway connection
+    async with bot:
+        await bot.start(TOKEN)
+
 if __name__ == "__main__":
-    bot.run(TOKEN)
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("Bot shutdown gracefully.", flush=True)
