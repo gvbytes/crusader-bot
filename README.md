@@ -23,21 +23,4 @@ Made using Antigravity.
 - **🌐 HTTP Health Check**:
   - Built-in `/health` endpoint for Render, Railway, and uptime pingers.
 
----
 
-## Deploy 24/7 on Render (Free Tier)
-
-1. Go to [dashboard.render.com](https://dashboard.render.com) and log in with GitHub (`gvbytes`).
-2. Click **New +** → Select **Web Service** (Free plan available).
-3. Connect repository **`gvbytes/crusader-bot`**.
-4. Configure:
-   - **Name**: `crusader-bot`
-   - **Language**: `Python 3` (or Docker)
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `python bot.py`
-   - **Instance Type**: `Free`
-5. Under **Environment Variables**, add:
-   - `DISCORD_BOT_TOKEN` = `<your_bot_token>`
-   - `EXTRA_BLOCKED_PHRASES` = *(optional)* extra phrases for the harassment filter, comma-separated
-6. For timeouts to work, give the bot's role the **Moderate Members** permission and place it above member roles.
-7. Click **Deploy Web Service**!
