@@ -1,27 +1,50 @@
 # Crusaders Discord Bot ⚔️
 
-24/7 Discord Community Bot & Automated Security Guardrails for **Crusaders** ([gvbytes.com](https://gvbytes.com)).
-Made using Antigravity.
+Community, moderation and CTF bot for the **Crusaders** Discord server.
+Made using Antigravity and Claude.
+
+Every command works as a slash command (`/ping`) and with the `!` prefix (`!ping`).
 
 ## Features
 
-- **🛡️ Basic Moderation Filters** (simple rules, not full malware or phishing detection):
-  - Link blocklist: deletes messages containing a short list of known IP-logger and fake-Nitro domains
-  - File-type block: deletes uploads ending in `.exe`, `.bat`, `.vbs`, `.scr`, `.cmd` or `.pif`
-  - Rate limit: deletes messages from anyone sending 5 or more within 3 seconds
-  - Mass-mention limit: deletes messages that mention more than 4 people
-  - Invite links: Discord invites are only allowed in `#showcase`
-  - Anti-toxicity & harassment: deletes messages with harassment phrases ("kys", "kill yourself", "go die", "nobody likes you"…), including simple disguises like `K.Y.S`, `kyyys` or `k1ll y0urself`. Three strikes within 10 minutes gives a 10-minute timeout. Add your own phrases with the `EXTRA_BLOCKED_PHRASES` environment variable (comma-separated). It is keyword-based, so it won't understand context and can miss spaced-out letters like `f u c k`.
-- **🎭 Automated Reaction Roles**: Real-time role assignment on reaction clicks in `#roles`.
-- **👋 Member Welcome System**: Custom embed welcome cards for new joiners in `#welcome-lounge`.
-- **💬 Interactive Mentions & Commands**:
-  - `@CrusaderBot` — Interactive help & server status
-  - `!ping` — Real-time latency probe
-  - `!help` — Server navigation shortcuts
-  - `!rules` — Protocol summary
-  - `!links` — Official website and portfolio links
-- **🌐 HTTP Health Check**:
-  - Built-in `/health` endpoint for Render, Railway, and uptime pingers.
+### 🛡️ Automatic moderation
+Runs on every message from non-staff members. Every removal is recorded in `#mod-log`.
+These are simple rules, not full malware or phishing detection.
+- **Link blocklist:** deletes messages containing a short list of known IP-logger and fake-Nitro domains
+- **File-type block:** deletes uploads ending in `.exe`, `.bat`, `.vbs`, `.scr`, `.cmd` or `.pif`
+- **Rate limit:** deletes messages from anyone sending 5 or more within 3 seconds
+- **Mass-mention limit:** deletes messages that mention more than 4 people
+- **Invite links:** Discord invites are only allowed in `#showcase`
+- **Harassment filter:** deletes messages with harassment phrases ("kys", "kill yourself", "go die", "nobody likes you"…), including simple disguises like `K.Y.S`, `kyyys` or `k1ll y0urself`. Three strikes within 10 minutes gives a 10-minute timeout. It is keyword-based, so it won't understand context and can miss spaced-out letters like `f u c k`.
+
+### 🧑‍⚖️ Staff commands
+Only visible to members with the matching Discord permission.
+| Command | What it does | Permission |
+|---|---|---|
+| `/warn @member reason` | Warns and DMs the member; warnings are saved | Timeout Members |
+| `/warnings @member` | Lists a member's warnings | Timeout Members |
+| `/clearwarnings @member` | Removes all of a member's warnings | Timeout Members |
+| `/timeout @member 2h reason` | Times out a member (up to 28 days) | Timeout Members |
+| `/untimeout @member` | Removes a timeout | Timeout Members |
+| `/purge 50 [@member]` | Bulk-deletes up to 100 recent messages | Manage Messages |
+| `/slowmode 10` | Sets channel slowmode (`0` turns it off) | Manage Channels |
+
+### 🤝 Community
+- **`/poll "Question?" A | B | C`**: up to 10 options, or none for a yes/no poll
+- **`/suggest idea`**: posts to `#suggestions` with 👍/👎 voting
+- **`/report @member reason`**: privately flags a member to staff in `#mod-log`
+- **Report a message:** right-click a message → **Apps** → **Report to staff**
+- **Welcome messages** in `#welcome-lounge`, and new members get the `⚔️ Crusader` role
+- **Reaction roles** in `#roles`: 🚀 Builder, 🚩 CTF / Cyber, 🎮 Gamer, ✅ Crusader
+
+### 🧰 Utility
+- **`/help`**: every command, generated automatically (staff also see staff commands)
+- **`/ping`**, **`/rules`**, **`/serverinfo`**, **`/userinfo [@member]`**, **`/avatar [@member]`**
+- **`/remind 2h submit the assignment`**: sends you a DM when it's time (max 30 days, 10 per person); **`/reminders`** lists yours
+
+### 🚩 CTF
+- **`/ctf [count] [online_only]`**: upcoming CTF competitions from [CTFtime](https://ctftime.org), with times shown in each viewer's own timezone
+- **Weekly post:** every Monday at 9:00 IST, the CTFs of the week are posted in `#ctf-news`
 
 ---
 
@@ -38,6 +61,36 @@ Environment variables:
 - `EXTRA_BLOCKED_PHRASES` (optional): extra phrases for the harassment filter, comma-separated
 - `PORT` (optional, default `8080`): port for the `/health` endpoint
 
-Discord permissions:
-- The bot's role needs **Manage Messages** to delete messages and **Manage Roles** for reaction roles.
-- For harassment timeouts, it also needs **Moderate Members**, and its role must sit **above** the members it moderates. Without this, the bot still deletes and warns but can't time anyone out.
+Everything else (channel names, roles, filter limits) is in [`config.py`](config.py).
+
+### Discord permissions
+- In the Developer Portal, turn on the **Server Members** and **Message Content** intents.
+- The bot's role needs **Manage Messages**, **Manage Roles**, **Timeout Members** and **Manage Channels**, and must sit **above** the members it moderates.
+- Invite the bot with the `bot` and `applications.commands` scopes so slash commands appear.
+
+### Channels
+The bot finds channels by the part of the name after `・`, so `🎭・roles` and `roles` both work.
+Optional channels are simply skipped if they don't exist:
+
+| Channel | Used for |
+|---|---|
+| `#mod-log` | Record of auto-deletions, reports and staff actions. **Make it staff-only.** |
+| `#suggestions` | `/suggest` posts (otherwise posted in the current channel) |
+| `#ctf-news` | Weekly CTF post |
+| `#roles`, `#rules-and-info`, `#welcome-lounge`, `#introductions`, `#showcase` | Existing channels, linked from messages |
+
+### Saved data
+Warnings and reminders are saved in `data/` (not committed to git). On hosts with a temporary disk, such as Render's free tier, this folder is wiped on every redeploy.
+
+## Project layout
+```
+bot.py          starts the bot, loads the cogs, health check server
+config.py       all settings
+utils.py        shared helpers (channel lookup, #mod-log, durations, saving data)
+cogs/
+  guardrails.py automatic moderation
+  moderation.py staff commands
+  community.py  welcome, reaction roles, polls, suggestions, reports
+  utility.py    help, info commands, reminders
+  ctf.py        CTFtime integration
+```
