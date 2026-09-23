@@ -14,8 +14,6 @@ from discord.ext import commands
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
 TOKEN = os.environ.get('DISCORD_BOT_TOKEN', '').strip()
-if not TOKEN and len(sys.argv) > 1:
-    TOKEN = sys.argv[1].strip()
 ROLE_MAP = {'🚀': '🚀 Builder', '🚩': '🚩 CTF / Cyber', '🎮': '🎮 Gamer', '✅': '⚔️ Crusader'}
 MALICIOUS_DOMAINS = ['grabify.link', 'iplogger.org', '2no.co', 'yip.su', 'iplis.ru', 'discord-nitro', 'free-nitro', 'dlscord', 'discorcl', 'steamcommunitu', 'steamcomminuty', 'gift-discord']
 DANGEROUS_EXTENSIONS = ['.exe', '.bat', '.vbs', '.scr', '.cmd', '.pif']
