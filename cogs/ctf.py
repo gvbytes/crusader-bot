@@ -40,9 +40,21 @@ async def is_public_url(url: str) -> bool:
     return all((ipaddress.ip_address(info[4][0]).is_global for info in infos))
 AI_FILTERS = {'allowed': {ai_policy.ALLOWED}, 'no_ai': {ai_policy.BANNED}, 'separate': {ai_policy.SEPARATE}, 'stated': {ai_policy.ALLOWED, ai_policy.BANNED, ai_policy.SEPARATE, ai_policy.MIXED}}
 AI_FILTER_NAMES = {'allowed': 'AI allowed', 'no_ai': 'no AI', 'separate': 'separate AI / human leaderboards', 'stated': 'a stated AI policy'}
+LOOKBACK_DAYS = 100
+RESTRICTIONS = {'Open': (True, '✅ Open to everyone'), 'Casual': (True, '✅ Open to everyone'), 'Individual': (True, '✅ Open to everyone · solo players'), 'Academic': (True, '🎓 University students only'), 'High-school': (False, '🏫 High-school students only'), 'Prequalified': (False, '🔒 Qualified teams only'), 'Invited': (False, '🔒 Invite only')}
 
 def to_unix(iso: str) -> int:
     return int(dt.datetime.fromisoformat(iso).timestamp())
+
+def participation(e: dict) -> tuple[bool, str]:
+    can_join, text = RESTRICTIONS.get(e.get('restrictions') or 'Open', (True, f"✅ {e.get('restrictions') or 'Open'}"))
+    if e.get('onsite'):
+        return (False, f"📍 On-site only ({e.get('location') or 'location on CTFtime'})")
+    return (can_join, text)
+
+def is_running(e: dict, now: float | None=None) -> bool:
+    now = now or time.time()
+    return to_unix(e['start']) <= now < to_unix(e['finish'])
 
 def ctf_embed(events: list, title: str, footer: str='Data from CTFtime.org') -> discord.Embed:
     embed = discord.Embed(title=title, url='https://ctftime.org/event/list/upcoming', color=config.COLOR_BAD)
@@ -50,9 +62,10 @@ def ctf_embed(events: list, title: str, footer: str='Data from CTFtime.org') -> 
         embed.description = 'No CTFs found in this period. Check back soon!'
     for e in events:
         start, finish = (to_unix(e['start']), to_unix(e['finish']))
-        where = '🌐 Online' if not e.get('onsite') else f"📍 {e.get('location') or 'On-site'}"
+        where = '🌐 Online' if not e.get('onsite') else '📍 On-site'
         weight = f" · weight {e['weight']:.1f}" if e.get('weight') else ''
-        embed.add_field(name=f"{e['title']}"[:256], value=f"{ai_policy.label(e)}\n{e.get('format') or 'CTF'} · {where}{weight}\n🕒 <t:{start}:f> → <t:{finish}:f> (starts <t:{start}:R>)\n[CTFtime]({e['ctftime_url']})" + (f" · [Website]({e['url']})" if e.get('url') else ''), inline=False)
+        when = f'🔴 **Live now** · ends <t:{finish}:R> (<t:{finish}:f>)' if is_running(e) else f'🕒 <t:{start}:f> → <t:{finish}:f> (starts <t:{start}:R>)'
+        embed.add_field(name=f"{e['title']}"[:256], value=f"{participation(e)[1]} · {ai_policy.label(e)}\n{e.get('format') or 'CTF'} · {where}{weight}\n{when}\n[CTFtime]({e['ctftime_url']})" + (f" · [Website]({e['url']})" if e.get('url') else ''), inline=False)
     embed.set_footer(text=f'{footer} · times shown in your timezone')
     return embed
 
@@ -70,19 +83,29 @@ class CTF(commands.Cog):
     async def cog_unload(self):
         self.digest_loop.cancel()
 
-    async def upcoming(self, days: int=FETCH_DAYS_AHEAD) -> list:
+    async def all_events(self) -> list:
         if self.cache and time.time() - self.cache_time < CACHE_SECONDS:
             return self.cache
         now = int(time.time())
-        params = {'limit': 100, 'start': now, 'finish': now + days * 86400}
-        async with self.bot.http_session.get(CTFTIME_API, params=params, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+        params = {'limit': 500, 'start': now - LOOKBACK_DAYS * 86400, 'finish': now + (FETCH_DAYS_AHEAD + LOOKBACK_DAYS) * 86400}
+        async with self.bot.http_session.get(CTFTIME_API, params=params, timeout=aiohttp.ClientTimeout(total=20)) as resp:
             resp.raise_for_status()
             events = await resp.json(content_type=None)
-        events = sorted(events, key=lambda e: e['start'])
-        await self.check_websites(events)
-        self.cache = events
+        self.cache = sorted(events, key=lambda e: e['start'])
         self.cache_time = time.time()
         return self.cache
+
+    async def upcoming(self, days: int=FETCH_DAYS_AHEAD) -> list:
+        now = time.time()
+        events = [e for e in await self.all_events() if now < to_unix(e['start']) < now + days * 86400]
+        await self.check_websites(events)
+        return events
+
+    async def running(self) -> list:
+        now = time.time()
+        events = sorted((e for e in await self.all_events() if is_running(e, now)), key=lambda e: e['finish'])
+        await self.check_websites(events)
+        return events
 
     async def check_websites(self, events: list):
         todo = [e for e in events if ai_policy.classify_text(f"{e.get('description') or ''} {e.get('restrictions') or ''}") == ai_policy.NOT_STATED]
@@ -125,10 +148,10 @@ class CTF(commands.Cog):
         return ai_policy.NOT_STATED
 
     @commands.hybrid_command(description='Show upcoming CTFs, optionally filtered by their AI policy')
-    @app_commands.describe(count='How many to show (1-10)', online_only='Hide on-site events', ai='Only show CTFs with this AI policy')
+    @app_commands.describe(count='How many to show (1-10)', online_only='Hide on-site events', ai='Only show CTFs with this AI policy', can_join='Only show CTFs our members can take part in')
     @app_commands.choices(ai=[app_commands.Choice(name='🤖 AI allowed', value='allowed'), app_commands.Choice(name='🚫 No AI', value='no_ai'), app_commands.Choice(name='⚖️ Separate AI / human leaderboards', value='separate'), app_commands.Choice(name='Any stated AI policy', value='stated')])
     @commands.cooldown(1, 10, commands.BucketType.channel)
-    async def ctf(self, ctx: commands.Context, count: commands.Range[int, 1, 10]=5, online_only: bool=False, ai: Literal['allowed', 'no_ai', 'separate', 'stated'] | None=None):
+    async def ctf(self, ctx: commands.Context, count: commands.Range[int, 1, 10]=5, online_only: bool=False, ai: Literal['allowed', 'no_ai', 'separate', 'stated'] | None=None, can_join: bool=False):
         await ctx.defer()
         try:
             events = await self.upcoming()
@@ -136,6 +159,8 @@ class CTF(commands.Cog):
             return await ctx.send("⚠️ Couldn't reach CTFtime right now. Try again in a few minutes.")
         if online_only:
             events = [e for e in events if not e.get('onsite')]
+        if can_join:
+            events = [e for e in events if participation(e)[0]]
         title = '🚩 Upcoming CTFs'
         if ai:
             events = [e for e in events if ai_policy.classify(e) in AI_FILTERS[ai]]
@@ -143,6 +168,34 @@ class CTF(commands.Cog):
             if not events:
                 return await ctx.send(f"No CTFs in the next {FETCH_DAYS_AHEAD} days say they have {AI_FILTER_NAMES[ai]} on CTFtime or their website. Most CTFs don't state an AI policy publicly, so check each event's own rules.")
         embed = ctf_embed(events[:count], title, footer=f'Data from CTFtime.org · {AI_NOTE}')
+        await ctx.send(embed=embed)
+
+    @commands.hybrid_command(description='CTFs going on right now, and which ones you can join')
+    @commands.cooldown(1, 10, commands.BucketType.channel)
+    async def ctfnow(self, ctx: commands.Context):
+        await ctx.defer()
+        try:
+            live = await self.running()
+            nxt = [e for e in await self.upcoming() if participation(e)[0]][:3]
+        except (aiohttp.ClientError, TimeoutError):
+            return await ctx.send("⚠️ Couldn't reach CTFtime right now. Try again in a few minutes.")
+        joinable = [e for e in live if participation(e)[0]]
+        restricted = [e for e in live if not participation(e)[0]]
+        if joinable:
+            embed = ctf_embed(joinable[:8], '🔴 CTFs live right now', footer=f'Data from CTFtime.org · {AI_NOTE}')
+            embed.description = f'**{len(joinable)} you can join** · {len(restricted)} restricted\n*Some CTFs close registration before they end, so check the event page.*'
+        else:
+            embed = ctf_embed(nxt, '🔴 CTFs live right now', footer=f'Data from CTFtime.org · {AI_NOTE}')
+            embed.description = '**No CTF you can join is running right now.**' + (f' ({len(restricted)} restricted one(s) are.)' if restricted else '') + ("\nHere's what's next:" if nxt else '')
+        if restricted:
+            lines = [f"• [{e['title']}]({e['ctftime_url']}): {participation(e)[1]}" for e in restricted]
+            shown = []
+            for line in lines:
+                if sum((len(x) + 1 for x in shown)) + len(line) > 950:
+                    break
+                shown.append(line)
+            more = f'\n…and {len(lines) - len(shown)} more' if len(shown) < len(lines) else ''
+            embed.add_field(name="🔒 Also running, but you can't join", value='\n'.join(shown) + more, inline=False)
         await ctx.send(embed=embed)
 
     async def post_digest(self, channel: discord.TextChannel) -> bool:
@@ -155,10 +208,17 @@ class CTF(commands.Cog):
         soon = [e for e in events if to_unix(e['start']) < cutoff][:10]
         every = config.CTF_POST_EVERY_DAYS
         embed = ctf_embed(soon, '🚩 CTFs coming up this week', footer=f'{DIGEST_MARKER} · posted every {every} days · data from CTFtime.org')
+        try:
+            live = [e for e in await self.running() if participation(e)[0]]
+        except (aiohttp.ClientError, TimeoutError):
+            live = []
+        live_line = '🔴 **Live now, open to join:** ' + ', '.join((e['title'] for e in live[:5])) + (f' and {len(live) - 5} more' if len(live) > 5 else '') + ' · `/ctfnow`\n' if live else ''
         if soon:
             counts = collections.Counter((ai_policy.classify(e) for e in soon))
             parts = [f'{ai_policy.LABELS[k]}: {counts[k]}' for k in (ai_policy.ALLOWED, ai_policy.BANNED, ai_policy.SEPARATE, ai_policy.MIXED, ai_policy.NOT_STATED) if counts[k]]
-            embed.description = '**AI rules:** ' + ' · '.join(parts) + f'\n*{AI_NOTE} Use `/ctf ai:` to filter.*'
+            embed.description = live_line + '**AI rules:** ' + ' · '.join(parts) + f'\n*{AI_NOTE} Use `/ctf ai:` to filter.*'
+        elif live_line:
+            embed.description = live_line
         try:
             await channel.send(embed=embed)
         except discord.HTTPException as e:
