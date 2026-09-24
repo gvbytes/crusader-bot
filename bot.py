@@ -8,6 +8,7 @@ This file only starts things up. Each feature lives in its own file in cogs/:
     community.py    welcome, reaction roles, /poll, /suggest, /report
     utility.py      /help, /ping, /rules, /serverinfo, /userinfo, /remind...
     ctf.py          upcoming CTFs from CTFtime.org
+    ai_news.py      daily AI news from trusted sources
 """
 
 import asyncio
@@ -27,7 +28,7 @@ from discord.ext import commands
 
 import config
 
-COGS = ["guardrails", "moderation", "community", "utility", "ctf"]
+COGS = ["guardrails", "moderation", "community", "utility", "ctf", "ai_news"]
 
 
 class CrusaderBot(commands.Bot):
@@ -121,6 +122,7 @@ async def handle_health_check(request):
         "bot_status": "ready" if ready else "connecting",
         "latency_ms": round(bot.latency * 1000) if ready else 0,
         "last_ctf_post": max(ctf.last_digest.values(), default=None) if (ctf := bot.get_cog("CTF")) else None,
+        "last_ai_post": max(ai.last_digest.values(), default=None) if (ai := bot.get_cog("AI News")) else None,
     })
 
 

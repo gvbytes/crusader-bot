@@ -22,6 +22,7 @@ CHANNELS = {
     "suggestions": "suggestions",
     "mod_log": "mod-log",
     "ctf": "cyber-and-ctf",
+    "ai": "ai-and-ml",
 }
 
 # --- Roles ---
@@ -65,6 +66,28 @@ TOXIC_TIMEOUT_MINUTES = 10
 # Post a digest of upcoming CTFs in #cyber-and-ctf every this many days (0 turns it off).
 # The first one goes out as soon as the bot starts if none was posted recently.
 CTF_POST_EVERY_DAYS = 3
+
+# --- Daily AI news ---
+# Posted in #ai-and-ml once a day. Only official AI lab blogs and established tech
+# outlets; each feed below was checked to work. Add or remove sources here.
+AI_NEWS_DAILY = True
+AI_NEWS_HOUR_IST = 9      # post at 9:00 IST
+AI_NEWS_SOURCES = [
+    # Official AI labs
+    {"name": "OpenAI", "kind": "lab", "url": "https://openai.com/news/rss.xml"},
+    {"name": "Google DeepMind", "kind": "lab", "url": "https://www.deepmind.com/blog/rss.xml"},
+    {"name": "Google AI", "kind": "lab", "url": "https://blog.google/technology/ai/rss/"},
+    {"name": "Microsoft Research", "kind": "lab", "url": "https://www.microsoft.com/en-us/research/feed/"},
+    {"name": "Hugging Face", "kind": "lab", "url": "https://huggingface.co/blog/feed.xml"},
+    {"name": "NVIDIA", "kind": "lab", "url": "https://blogs.nvidia.com/feed/", "ai_only": True},
+    # Established tech news
+    {"name": "MIT Technology Review", "kind": "news", "url": "https://www.technologyreview.com/topic/artificial-intelligence/feed"},
+    {"name": "IEEE Spectrum", "kind": "news", "url": "https://spectrum.ieee.org/feeds/topic/artificial-intelligence.rss"},
+    {"name": "Ars Technica", "kind": "news", "url": "https://arstechnica.com/ai/feed/"},
+    {"name": "The Verge", "kind": "news", "url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"},
+    {"name": "TechCrunch", "kind": "news", "url": "https://techcrunch.com/category/artificial-intelligence/feed/"},
+    {"name": "Wired", "kind": "news", "url": "https://www.wired.com/feed/tag/ai/latest/rss"},
+]
 
 # --- Saved data (warnings, reminders) ---
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")

@@ -18,7 +18,7 @@ from discord.ext import commands, tasks
 
 import ai_policy
 import config
-from utils import channel_link, find_channel
+from utils import channel_link, find_channel, read_limited
 
 CTFTIME_API = "https://ctftime.org/api/v1/events/"
 CACHE_SECONDS = 30 * 60          # CTFtime asks bots not to hammer the API
@@ -195,7 +195,7 @@ class CTF(commands.Cog):
                         continue
                     if resp.status != 200 or "html" not in resp.headers.get("Content-Type", ""):
                         return None
-                    raw = await resp.content.read(SITE_MAX_BYTES)
+                    raw = await read_limited(resp, SITE_MAX_BYTES)
                     return page_text(raw.decode("utf-8", errors="ignore"))
             except (aiohttp.ClientError, TimeoutError, UnicodeError, ValueError):
                 return None

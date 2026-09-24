@@ -88,6 +88,17 @@ def can_moderate(actor: discord.Member, target: discord.Member) -> str | None:
     return None
 
 
+async def read_limited(resp, limit: int) -> bytes:
+    """Read a whole HTTP response body, but never more than `limit` bytes.
+    (resp.content.read(n) only returns what has arrived so far, often just the first chunk.)"""
+    data = bytearray()
+    async for chunk in resp.content.iter_chunked(64 * 1024):
+        data += chunk
+        if len(data) >= limit:
+            break
+    return bytes(data[:limit])
+
+
 DURATION_RE = re.compile(r"(\d+)\s*(d|h|m|s)")
 UNIT_SECONDS = {"d": 86400, "h": 3600, "m": 60, "s": 1}
 

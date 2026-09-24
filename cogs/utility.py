@@ -18,6 +18,7 @@ HELP_SECTIONS = {
     "Utility": "🧰 Utility",
     "Community": "🤝 Community",
     "CTF": "🚩 CTF",
+    "AI News": "🧠 AI news",
     "Moderation": "🛡️ Staff only",
 }
 

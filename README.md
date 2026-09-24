@@ -54,6 +54,16 @@ Only visible to members with the matching Discord permission.
 - **Automatic CTF digest every 3 days** in `#cyber-and-ctf`, listing the CTFs starting in the next week and any joinable CTFs that are live. The bot checks the channel for its own last digest, so restarts don't reset the schedule. Change the interval with `CTF_POST_EVERY_DAYS` in `config.py`.
 - **`/ctfpost`** (staff, Manage Messages): post the digest right now; the next automatic one follows 3 days later
 
+### 🧠 Daily AI news
+- **Every day at 9:00 IST** in `#ai-and-ml`: the top 10 AI updates of the last 24 hours, each with its source, a short summary from the source itself, and a link.
+- **Trusted sources only**, each checked to publish a working feed:
+  - Official AI labs: OpenAI, Google DeepMind, Google AI, Microsoft Research, Hugging Face, NVIDIA
+  - Established tech news: MIT Technology Review, IEEE Spectrum, Ars Technica, The Verge, TechCrunch, Wired
+- **How it picks:** lab announcements first (up to 6), then news; at most 2 per source and 2 per company, and the same story from different outlets appears once. NVIDIA posts that aren't about AI are skipped.
+- **Reliable:** a failing feed is retried, then its last good copy is used; the bot checks the channel for today's post, so restarts never double-post or skip a day.
+- **`/ainews`**: the latest AI news on demand. **`/ainewspost`** (staff): post today's update now.
+- Change sources or the time in `config.py` (`AI_NEWS_SOURCES`, `AI_NEWS_HOUR_IST`).
+
 ---
 
 ## Setup
@@ -85,6 +95,7 @@ Optional channels are simply skipped if they don't exist:
 | `#mod-log` | Record of auto-deletions, reports and staff actions. **Make it staff-only.** Until it exists, reports are sent to the server owner by DM. |
 | `#suggestions` | `/suggest` posts (otherwise posted in the current channel) |
 | `#cyber-and-ctf` | CTF digest every 3 days |
+| `#ai-and-ml` | Daily AI news at 9:00 IST |
 | `#roles`, `#rules-and-info`, `#welcome-lounge`, `#introductions`, `#showcase` | Existing channels, linked from messages |
 
 ### Saved data
@@ -102,4 +113,5 @@ cogs/
   community.py  welcome, reaction roles, polls, suggestions, reports
   utility.py    help, info commands, reminders
   ctf.py        CTFtime integration
+  ai_news.py    daily AI news from trusted feeds
 ```
