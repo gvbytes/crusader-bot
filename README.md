@@ -13,6 +13,7 @@ all commands work both as slash commands and with prefix (!).
 - cogs/moderation.py : staff commands (warn, timeout, purge, slowmode)
 - cogs/community.py : welcome messages, reaction roles, polls, suggestions
 - cogs/utility.py : ping, help, rules, reminders
+- ai_policy.py : parses ctf descriptions and rules to check if ai tools are allowed
 - cogs/ctf.py : ctftime integration and upcoming ctfs
 - requirements.txt : dependencies (discord.py, aiohttp, certifi)
 
@@ -72,3 +73,4 @@ python bot.py
 ### ctf tracking
 - /ctf : upcoming ctfs from ctftime with timezone conversion
 - automated digest posted every 3 days in #cyber-and-ctf
+- parses ctf rules to detect stated ai policies (allowed, prohibited, unstated)
