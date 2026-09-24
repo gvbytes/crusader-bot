@@ -43,7 +43,12 @@ Only visible to members with the matching Discord permission.
 - **`/remind 2h submit the assignment`**: sends you a DM when it's time (max 30 days, 10 per person); **`/reminders`** lists yours
 
 ### 🚩 CTF
-- **`/ctf [count] [online_only]`**: upcoming CTF competitions from [CTFtime](https://ctftime.org), with times shown in each viewer's own timezone
+- **`/ctf [count] [online_only] [ai]`**: upcoming CTF competitions (next 30 days) from [CTFtime](https://ctftime.org), with times shown in each viewer's own timezone
+- **AI policy for every CTF:** each listing is labelled 🤖 AI allowed, 🚫 No AI, ⚖️ Separate AI / human leaderboards, ⚠️ Mixed rules, or ❔ Not stated. Filter with `/ctf ai:`.
+  - The bot reads the CTF's CTFtime description first, then its website (homepage and `/rules`); website results are marked "(from website)".
+  - It looks for actual rules ("AI is strictly prohibited", "we don't ban AI"), not mentions of AI as a challenge category.
+  - Most CTFs don't publish an AI policy, and sites that load their text with JavaScript can't be read, so many show "Not stated". Always check the official rules.
+  - The rules live in [`ai_policy.py`](ai_policy.py).
 - **Automatic CTF digest every 3 days** in `#cyber-and-ctf`, listing the CTFs starting in the next week. The bot checks the channel for its own last digest, so restarts don't reset the schedule. Change the interval with `CTF_POST_EVERY_DAYS` in `config.py`.
 - **`/ctfpost`** (staff, Manage Messages): post the digest right now; the next automatic one follows 3 days later
 
@@ -87,6 +92,7 @@ Warnings and reminders are saved in `data/` (not committed to git). On hosts wit
 ```
 bot.py          starts the bot, loads the cogs, health check server
 config.py       all settings
+ai_policy.py    works out a CTF's AI policy from its description or website
 utils.py        shared helpers (channel lookup, #mod-log, durations, saving data)
 cogs/
   guardrails.py automatic moderation
