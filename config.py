@@ -62,7 +62,9 @@ TOXIC_STRIKES_FOR_TIMEOUT = 3
 TOXIC_TIMEOUT_MINUTES = 10
 
 # --- CTF feed ---
-CTF_WEEKLY_POST = True   # post upcoming CTFs to #cyber-and-ctf every Monday, 9:00 IST
+# Post a digest of upcoming CTFs in #cyber-and-ctf every this many days (0 turns it off).
+# The first one goes out as soon as the bot starts if none was posted recently.
+CTF_POST_EVERY_DAYS = 3
 
 # --- Saved data (warnings, reminders) ---
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")

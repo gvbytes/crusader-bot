@@ -44,7 +44,8 @@ Only visible to members with the matching Discord permission.
 
 ### 🚩 CTF
 - **`/ctf [count] [online_only]`**: upcoming CTF competitions from [CTFtime](https://ctftime.org), with times shown in each viewer's own timezone
-- **Weekly post:** every Monday at 9:00 IST, the CTFs of the week are posted in `#cyber-and-ctf`
+- **Automatic CTF digest every 3 days** in `#cyber-and-ctf`, listing the CTFs starting in the next week. The bot checks the channel for its own last digest, so restarts don't reset the schedule. Change the interval with `CTF_POST_EVERY_DAYS` in `config.py`.
+- **`/ctfpost`** (staff, Manage Messages): post the digest right now; the next automatic one follows 3 days later
 
 ---
 
@@ -76,7 +77,7 @@ Optional channels are simply skipped if they don't exist:
 |---|---|
 | `#mod-log` | Record of auto-deletions, reports and staff actions. **Make it staff-only.** Until it exists, reports are sent to the server owner by DM. |
 | `#suggestions` | `/suggest` posts (otherwise posted in the current channel) |
-| `#cyber-and-ctf` | Weekly CTF post |
+| `#cyber-and-ctf` | CTF digest every 3 days |
 | `#roles`, `#rules-and-info`, `#welcome-lounge`, `#introductions`, `#showcase` | Existing channels, linked from messages |
 
 ### Saved data

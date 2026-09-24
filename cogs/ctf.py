@@ -9,23 +9,23 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 import config
-from utils import find_channel
+from utils import channel_link, find_channel
 
 CTFTIME_API = "https://ctftime.org/api/v1/events/"
 CACHE_SECONDS = 30 * 60          # CTFtime asks bots not to hammer the API
-MONDAY_9AM_IST = dt.time(hour=3, minute=30, tzinfo=dt.timezone.utc)
+DIGEST_MARKER = "CTF digest"     # footer text that identifies the bot's scheduled posts
+DIGEST_DAYS_AHEAD = 7            # a digest lists CTFs starting in the next week
 
 
 def to_unix(iso: str) -> int:
     return int(dt.datetime.fromisoformat(iso).timestamp())
 
 
-def ctf_embed(events: list, title: str) -> discord.Embed:
+def ctf_embed(events: list, title: str, footer: str = "Data from CTFtime.org") -> discord.Embed:
     embed = discord.Embed(title=title, url="https://ctftime.org/event/list/upcoming",
                           color=config.COLOR_BAD)
     if not events:
-        embed.description = "No CTFs found in the next two weeks."
-        return embed
+        embed.description = "No CTFs found in this period. Check back soon!"
     for e in events:
         start, finish = to_unix(e["start"]), to_unix(e["finish"])
         where = "🌐 Online" if not e.get("onsite") else f"📍 {e.get('location') or 'On-site'}"
@@ -37,7 +37,7 @@ def ctf_embed(events: list, title: str) -> discord.Embed:
                    f"[CTFtime]({e['ctftime_url']})" + (f" · [Website]({e['url']})" if e.get("url") else "")),
             inline=False,
         )
-    embed.set_footer(text="Data from CTFtime.org · times shown in your timezone")
+    embed.set_footer(text=f"{footer} · times shown in your timezone")
     return embed
 
 
@@ -48,11 +48,12 @@ class CTF(commands.Cog):
         self.bot = bot
         self.cache: list = []
         self.cache_time = 0.0
-        if config.CTF_WEEKLY_POST:
-            self.weekly_post.start()
+        self.last_digest: dict[int, int] = {}   # guild id -> unix time of the last digest
+        if config.CTF_POST_EVERY_DAYS:
+            self.digest_loop.start()
 
     async def cog_unload(self):
-        self.weekly_post.cancel()
+        self.digest_loop.cancel()
 
     async def upcoming(self, days: int = 14) -> list:
         """Fetch upcoming CTFs (cached for 30 minutes)."""
@@ -68,6 +69,7 @@ class CTF(commands.Cog):
         self.cache_time = time.time()
         return self.cache
 
+    # --- /ctf -----------------------------------------------------------------
     @commands.hybrid_command(description="Show upcoming CTF competitions from CTFtime")
     @app_commands.describe(count="How many to show (1-10)", online_only="Hide on-site events")
     @commands.cooldown(1, 10, commands.BucketType.channel)
@@ -82,26 +84,78 @@ class CTF(commands.Cog):
             events = [e for e in events if not e.get("onsite")]
         await ctx.send(embed=ctf_embed(events[:count], "🚩 Upcoming CTFs"))
 
-    @tasks.loop(time=MONDAY_9AM_IST)
-    async def weekly_post(self):
-        if dt.datetime.now(dt.timezone.utc).weekday() != 0:   # only on Mondays
-            return
+    # --- Scheduled digest -----------------------------------------------------
+    async def post_digest(self, channel: discord.TextChannel) -> bool:
+        """Post the CTF digest in a channel. Returns True if it was sent."""
         try:
-            events = await self.upcoming(days=7)
-        except (aiohttp.ClientError, TimeoutError):
-            return
-        events = [e for e in events if to_unix(e["start"]) < time.time() + 7 * 86400][:10]
+            events = await self.upcoming()
+        except (aiohttp.ClientError, TimeoutError) as e:
+            print(f"  [!] CTF digest: CTFtime unreachable ({e!r})", flush=True)
+            return False
+        cutoff = time.time() + DIGEST_DAYS_AHEAD * 86400
+        soon = [e for e in events if to_unix(e["start"]) < cutoff][:10]
+        every = config.CTF_POST_EVERY_DAYS
+        embed = ctf_embed(soon, "🚩 CTFs coming up this week",
+                          footer=f"{DIGEST_MARKER} · posted every {every} days · data from CTFtime.org")
+        try:
+            await channel.send(embed=embed)
+        except discord.HTTPException as e:
+            print(f"  [!] CTF digest: can't post in #{channel.name} ({e})", flush=True)
+            return False
+        self.last_digest[channel.guild.id] = int(time.time())
+        print(f"  [+] CTF digest posted in #{channel.name} ({len(soon)} CTFs)", flush=True)
+        return True
+
+    async def last_digest_time(self, channel: discord.TextChannel) -> int | None:
+        """When the bot last posted a digest in this channel, read from the channel itself,
+        so the schedule survives restarts without saving anything to disk."""
+        since = discord.utils.utcnow() - dt.timedelta(days=config.CTF_POST_EVERY_DAYS)
+        async for msg in channel.history(after=since, oldest_first=False, limit=500):
+            if msg.author == self.bot.user and any(
+                    DIGEST_MARKER in (e.footer.text or "") for e in msg.embeds):
+                return int(msg.created_at.timestamp())
+        return None
+
+    @tasks.loop(hours=1)
+    async def digest_loop(self):
+        period = config.CTF_POST_EVERY_DAYS * 86400
         for guild in self.bot.guilds:
             channel = find_channel(guild, "ctf")
-            if channel:
+            if not channel:
+                continue
+            last = self.last_digest.get(guild.id)
+            if last is None or time.time() - last >= period:
                 try:
-                    await channel.send(embed=ctf_embed(events, "🚩 CTFs this week"))
-                except discord.HTTPException:
-                    pass
+                    last = await self.last_digest_time(channel)
+                except discord.HTTPException as e:
+                    print(f"  [!] CTF digest: can't read #{channel.name} ({e})", flush=True)
+                    continue
+                if last:
+                    self.last_digest[guild.id] = last
+            if last is None or time.time() - last >= period:
+                await self.post_digest(channel)
 
-    @weekly_post.before_loop
-    async def before_weekly(self):
+    @digest_loop.before_loop
+    async def before_digest(self):
         await self.bot.wait_until_ready()
+
+    # --- /ctfpost (staff) -----------------------------------------------------
+    @commands.hybrid_command(description="Staff: post the CTF digest in the CTF channel now")
+    @app_commands.default_permissions(manage_messages=True)
+    @commands.has_permissions(manage_messages=True)
+    @commands.guild_only()
+    async def ctfpost(self, ctx: commands.Context):
+        channel = find_channel(ctx.guild, "ctf")
+        if not channel:
+            return await ctx.send(f"⚠️ I can't find {channel_link(ctx.guild, 'ctf')}. "
+                                  "Create it or change `CHANNELS['ctf']` in config.py.", ephemeral=True)
+        await ctx.defer(ephemeral=True)
+        if await self.post_digest(channel):
+            await ctx.send(f"✅ Posted in {channel.mention}. The next automatic post is in "
+                           f"{config.CTF_POST_EVERY_DAYS} days.", ephemeral=True)
+        else:
+            await ctx.send(f"⚠️ Couldn't post in {channel.mention}. Check that I can send messages "
+                           "and embed links there, and that CTFtime is up.", ephemeral=True)
 
 
 async def setup(bot: commands.Bot):

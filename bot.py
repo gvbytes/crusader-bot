@@ -43,7 +43,13 @@ class CrusaderBot(commands.Bot):
 
     async def setup_hook(self):
         # Runs once, before the bot connects.
-        self.http_session = aiohttp.ClientSession(headers={"User-Agent": "CrusaderBot/2.0 (Discord bot)"})
+        # Give the web session certifi's certificates explicitly, so HTTPS to CTFtime
+        # works on every system, whatever order the libraries were imported in.
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
+        self.http_session = aiohttp.ClientSession(
+            headers={"User-Agent": "CrusaderBot/2.0 (Discord bot)"},
+            connector=aiohttp.TCPConnector(ssl=ssl_context),
+        )
         for cog in COGS:
             await self.load_extension(f"cogs.{cog}")
             print(f"  [+] Loaded cogs/{cog}.py", flush=True)
@@ -114,6 +120,7 @@ async def handle_health_check(request):
         "bot_user": str(bot.user) if bot.user else None,
         "bot_status": "ready" if ready else "connecting",
         "latency_ms": round(bot.latency * 1000) if ready else 0,
+        "last_ctf_post": max(ctf.last_digest.values(), default=None) if (ctf := bot.get_cog("CTF")) else None,
     })
 
 
