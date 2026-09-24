@@ -7,7 +7,7 @@ from utils import channel_link, is_staff, load_json, parse_duration, save_json
 REMINDERS_FILE = 'reminders.json'
 MAX_REMINDER = 30 * 86400
 MAX_REMINDERS_PER_USER = 10
-HELP_SECTIONS = {'Utility': '🧰 Utility', 'Community': '🤝 Community', 'CTF': '🚩 CTF', 'Moderation': '🛡️ Staff only'}
+HELP_SECTIONS = {'Utility': '🧰 Utility', 'Community': '🤝 Community', 'CTF': '🚩 CTF', 'AI News': '🧠 AI news', 'Moderation': '🛡️ Staff only'}
 
 class Utility(commands.Cog):
 

@@ -57,6 +57,14 @@ def can_moderate(actor: discord.Member, target: discord.Member) -> str | None:
     if target.top_role >= target.guild.me.top_role:
         return "That member's role is higher than mine. Move my role up in Server Settings → Roles."
     return None
+
+async def read_limited(resp, limit: int) -> bytes:
+    data = bytearray()
+    async for chunk in resp.content.iter_chunked(64 * 1024):
+        data += chunk
+        if len(data) >= limit:
+            break
+    return bytes(data[:limit])
 DURATION_RE = re.compile('(\\d+)\\s*(d|h|m|s)')
 UNIT_SECONDS = {'d': 86400, 'h': 3600, 'm': 60, 's': 1}
 

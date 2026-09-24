@@ -10,7 +10,7 @@ import discord
 from aiohttp import web
 from discord.ext import commands
 import config
-COGS = ['guardrails', 'moderation', 'community', 'utility', 'ctf']
+COGS = ['guardrails', 'moderation', 'community', 'utility', 'ctf', 'ai_news']
 
 class CrusaderBot(commands.Bot):
 
@@ -76,7 +76,7 @@ async def on_command_error(ctx: commands.Context, error: commands.CommandError):
 
 async def handle_health_check(request):
     ready = bot.is_ready()
-    return web.json_response({'status': 'online', 'service': 'CrusaderBot', 'version': os.environ.get('RENDER_GIT_COMMIT', 'local')[:7], 'bot_user': str(bot.user) if bot.user else None, 'bot_status': 'ready' if ready else 'connecting', 'latency_ms': round(bot.latency * 1000) if ready else 0, 'last_ctf_post': max(ctf.last_digest.values(), default=None) if (ctf := bot.get_cog('CTF')) else None})
+    return web.json_response({'status': 'online', 'service': 'CrusaderBot', 'version': os.environ.get('RENDER_GIT_COMMIT', 'local')[:7], 'bot_user': str(bot.user) if bot.user else None, 'bot_status': 'ready' if ready else 'connecting', 'latency_ms': round(bot.latency * 1000) if ready else 0, 'last_ctf_post': max(ctf.last_digest.values(), default=None) if (ctf := bot.get_cog('CTF')) else None, 'last_ai_post': max(ai.last_digest.values(), default=None) if (ai := bot.get_cog('AI News')) else None})
 
 async def start_health_server():
     app = web.Application()

@@ -14,7 +14,8 @@ all commands work both as slash commands and with prefix (!).
 - cogs/community.py : welcome messages, reaction roles, polls, suggestions
 - cogs/utility.py : ping, help, rules, reminders
 - ai_policy.py : parses ctf descriptions and rules to check if ai tools are allowed
-- cogs/ctf.py : ctftime integration and upcoming ctfs
+- cogs/ctf.py : ctftime integration, upcoming ctfs and automated digests
+- cogs/ai_news.py : daily ai news feed fetched from lab rss feeds
 - requirements.txt : dependencies (discord.py, aiohttp, certifi)
 
 ## setup and install
@@ -75,3 +76,9 @@ python bot.py
 - /ctfnow : active ctfs running right now
 - automated digest posted every 3 days in #cyber-and-ctf
 - parses ctf rules to detect stated ai policies (allowed, prohibited, unstated)
+
+### daily ai news
+- runs daily at 09:00 IST in #ai-and-ml
+- aggregates updates from major lab rss feeds (openai, deepmind, microsoft, nvidia, hugging face)
+- dedupes stories and posts top highlights with links
+- /ainews : on-demand news fetch
