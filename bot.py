@@ -20,7 +20,8 @@ class CrusaderBot(commands.Bot):
         self.synced_guilds: set[int] = set()
 
     async def setup_hook(self):
-        self.http_session = aiohttp.ClientSession(headers={'User-Agent': 'CrusaderBot/2.0 (Discord bot)'})
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
+        self.http_session = aiohttp.ClientSession(headers={'User-Agent': 'CrusaderBot/2.0 (Discord bot)'}, connector=aiohttp.TCPConnector(ssl=ssl_context))
         for cog in COGS:
             await self.load_extension(f'cogs.{cog}')
             print(f'  [+] Loaded cogs/{cog}.py', flush=True)
@@ -75,7 +76,7 @@ async def on_command_error(ctx: commands.Context, error: commands.CommandError):
 
 async def handle_health_check(request):
     ready = bot.is_ready()
-    return web.json_response({'status': 'online', 'service': 'CrusaderBot', 'version': os.environ.get('RENDER_GIT_COMMIT', 'local')[:7], 'bot_user': str(bot.user) if bot.user else None, 'bot_status': 'ready' if ready else 'connecting', 'latency_ms': round(bot.latency * 1000) if ready else 0})
+    return web.json_response({'status': 'online', 'service': 'CrusaderBot', 'version': os.environ.get('RENDER_GIT_COMMIT', 'local')[:7], 'bot_user': str(bot.user) if bot.user else None, 'bot_status': 'ready' if ready else 'connecting', 'latency_ms': round(bot.latency * 1000) if ready else 0, 'last_ctf_post': max(ctf.last_digest.values(), default=None) if (ctf := bot.get_cog('CTF')) else None})
 
 async def start_health_server():
     app = web.Application()

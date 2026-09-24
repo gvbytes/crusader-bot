@@ -71,3 +71,4 @@ python bot.py
 
 ### ctf tracking
 - /ctf : upcoming ctfs from ctftime with timezone conversion
+- automated digest posted every 3 days in #cyber-and-ctf
