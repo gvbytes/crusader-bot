@@ -68,7 +68,8 @@ python bot.py
 ### community and utility
 - welcome messages in #welcome-lounge with automatic role assignment
 - reaction roles in #roles
-- /poll, /suggest, /report
+- /poll, /suggest, /report, /meme
+- auto-reactions in #memes
 - /ping, /help, /rules, /serverinfo, /remind
 
 ### ctf tracking

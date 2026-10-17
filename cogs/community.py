@@ -1,3 +1,4 @@
+import aiohttp
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -159,6 +160,41 @@ class Community(commands.Cog):
         if not interaction.guild:
             return await interaction.response.send_message('Only works in a server.', ephemeral=True)
         await interaction.response.send_modal(ReportModal(message))
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        if message.author.bot or not message.guild:
+            return
+        meme_ch = find_channel(message.guild, 'memes')
+        if meme_ch and message.channel.id == meme_ch.id:
+            has_media = bool(message.attachments) or any((ext in message.content.lower() for ext in ('.png', '.jpg', '.jpeg', '.gif', '.webp', '.mp4', 'tenor.com', 'giphy.com', 'imgur.com', 'reddit.com', 'v.redd.it', 'i.redd.it')))
+            if has_media or len(message.content.strip()) > 0:
+                try:
+                    await message.add_reaction('😂')
+                    await message.add_reaction('💀')
+                except discord.HTTPException:
+                    pass
+
+    @commands.hybrid_command(description='Get a random tech or community meme')
+    @commands.cooldown(1, 5, commands.BucketType.user)
+    async def meme(self, ctx: commands.Context):
+        url = 'https://meme-api.com/gimme/ProgrammerHumor+wholesomememes+memes'
+        try:
+            session = self.bot.http_session or aiohttp.ClientSession()
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=8)) as resp:
+                if resp.status != 200:
+                    return await ctx.send('⚠️ Could not fetch a meme right now. Try again later.', ephemeral=True)
+                data = await resp.json()
+        except Exception:
+            return await ctx.send('⚠️ Error fetching meme from feed.', ephemeral=True)
+        if data.get('nsfw', False):
+            return await ctx.send('⚠️ Fetched meme was flagged NSFW, skipped. Try again.', ephemeral=True)
+        embed = discord.Embed(title=data.get('title', 'Meme')[:256], url=data.get('postLink'), color=config.COLOR_MAIN)
+        embed.set_image(url=data.get('url'))
+        sub = data.get('subreddit')
+        ups = data.get('ups', 0)
+        embed.set_footer(text=f'r/{sub} • 👍 {ups}')
+        await ctx.send(embed=embed)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Community(bot))
