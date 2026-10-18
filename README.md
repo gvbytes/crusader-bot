@@ -64,6 +64,7 @@ python bot.py
 - /timeout, /untimeout
 - /purge
 - /slowmode
+- /setupmemes
 
 ### community and utility
 - welcome messages in #welcome-lounge with automatic role assignment

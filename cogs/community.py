@@ -3,10 +3,10 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 import config
-from utils import channel_link, find_channel, mod_log
+from utils import channel_link, find_channel, is_staff, mod_log
 REPORT_SENT = '✅ Thanks. Staff have been notified privately.'
-REPORT_FAILED = '⚠️ I could not deliver your report because this server has no #mod-log channel. Please message a staff member directly.'
 NUMBER_EMOJIS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
+REPORT_FAILED = '⚠️ I could not deliver your report because this server has no #mod-log channel. Please message a staff member directly.'
 
 class ReportModal(discord.ui.Modal, title='Report this message to staff'):
     reason = discord.ui.TextInput(label="What's wrong with it?", style=discord.TextStyle.paragraph, max_length=500, placeholder='e.g. harassment, scam link, spam')
@@ -195,6 +195,26 @@ class Community(commands.Cog):
         ups = data.get('ups', 0)
         embed.set_footer(text=f'r/{sub} • 👍 {ups}')
         await ctx.send(embed=embed)
+
+    @commands.hybrid_command(description='Create the #memes channel in the server')
+    @commands.guild_only()
+    async def setupmemes(self, ctx: commands.Context):
+        if not is_staff(ctx.author):
+            return await ctx.send("⛔ You don't have permission to use this command.", ephemeral=True)
+        existing = find_channel(ctx.guild, 'memes')
+        if existing:
+            return await ctx.send(f'⚠️ Meme channel already exists: {existing.mention}', ephemeral=True)
+        cat = discord.utils.find(lambda c: 'lounge' in c.name.lower() or 'squad' in c.name.lower(), ctx.guild.categories)
+        try:
+            if cat:
+                ch = await cat.create_text_channel(name='😂・memes', topic='Memes, shitposts, clips and laughs. Drop your best memes here.')
+            else:
+                ch = await ctx.guild.create_text_channel(name='😂・memes', topic='Memes, shitposts, clips and laughs. Drop your best memes here.')
+            await ctx.send(f'✅ Created {ch.mention} under **{cat.name if cat else "the server"}**!')
+        except discord.Forbidden:
+            await ctx.send("❌ I need 'Manage Channels' permission to create the channel.", ephemeral=True)
+        except discord.HTTPException as e:
+            await ctx.send(f'❌ Failed to create channel: {e}', ephemeral=True)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Community(bot))
